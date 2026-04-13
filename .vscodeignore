@@ -1,0 +1,12 @@
+.vscode/**
+.vscode-test/**
+src/**
+.gitignore
+.obsidian/**
+.agent/**
+lear antigravity settings/**
+*.ts
+!*.d.ts
+**/*.map
+node_modules/**
+tsconfig.json

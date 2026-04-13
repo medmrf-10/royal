@@ -1,0 +1,36 @@
+{
+  "name": "royal-velvet-antigravity",
+  "displayName": "Royal Velvet for Antigravity",
+  "description": "A premium dark/light color theme inspired by Royal Velvet for Obsidian — rainbow headings, rich syntax colors, and beautiful Markdown styling.",
+  "version": "1.0.0",
+  "publisher": "med10",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.60.0"
+  },
+  "categories": [
+    "Themes"
+  ],
+  "activationEvents": [
+    "onLanguage:markdown"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "themes": [
+      {
+        "label": "Royal Velvet Dark",
+        "uiTheme": "vs-dark",
+        "path": "./themes/royal-velvet-dark.json"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.60.0",
+    "typescript": "^5.0.0"
+  }
+}
