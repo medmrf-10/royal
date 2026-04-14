@@ -22,6 +22,9 @@
         "uiTheme": "vs-dark",
         "path": "./themes/royal-velvet-dark.json"
       }
+    ],
+    "markdown.styles": [
+      "./media/table-styles.css"
     ]
   },
   "scripts": {

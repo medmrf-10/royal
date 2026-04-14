@@ -83,6 +83,7 @@ let tableDashDecType: vscode.TextEditorDecorationType;
 let tableHeaderDecType: vscode.TextEditorDecorationType;
 let tableRowOddDecType: vscode.TextEditorDecorationType;
 let tableRowEvenDecType: vscode.TextEditorDecorationType;
+let tableBorderDecType: vscode.TextEditorDecorationType;
 
 // === List Decoration Types ===
 let listDecorationTypes: vscode.TextEditorDecorationType[] = [];
@@ -93,24 +94,28 @@ let bqDecorationTypes: vscode.TextEditorDecorationType[] = [];
 function createStaticDecorations() {
   // Table decorations
   tablePipeDecType = vscode.window.createTextEditorDecorationType({
-    color: COLORS.layer4,
+    color: COLORS.purple + '80', // semi-transparent purple for pipes
+    fontWeight: 'bold'
   });
   tableDashDecType = vscode.window.createTextEditorDecorationType({
-    color: COLORS.layer3,
+    color: COLORS.layer4,
   });
   tableHeaderDecType = vscode.window.createTextEditorDecorationType({
-    color: COLORS.text,
-    backgroundColor: '#9580ff40', // purple semi-transparent
+    backgroundColor: '#9580ff25', // subtle purple tint
+    after: {
+      contentText: '',
+      border: `1px solid ${COLORS.layer4}`,
+    },
     fontWeight: 'bold',
-    isWholeLine: true,
   });
   tableRowOddDecType = vscode.window.createTextEditorDecorationType({
-    backgroundColor: '#272835', // layer-1
-    isWholeLine: true,
+    backgroundColor: '#21212c', // matching editor background or slightly darker
   });
   tableRowEvenDecType = vscode.window.createTextEditorDecorationType({
-    backgroundColor: '#2e2f3e', // layer-2
-    isWholeLine: true,
+    backgroundColor: '#272835', // layer-1
+  });
+  tableBorderDecType = vscode.window.createTextEditorDecorationType({
+    outline: `1px solid ${COLORS.layer4}40`,
   });
 
   // List marker decorations (one per rainbow color)
@@ -146,6 +151,7 @@ function updateDecorations(editor: vscode.TextEditor) {
   const tableHeaderDecos: vscode.DecorationOptions[] = [];
   const tableRowOddDecos: vscode.DecorationOptions[] = [];
   const tableRowEvenDecos: vscode.DecorationOptions[] = [];
+  const tableBorderDecos: vscode.DecorationOptions[] = [];
   
   const listDecos: vscode.DecorationOptions[][] = RAINBOW.map(() => []);
   const bqDecos: vscode.DecorationOptions[][] = RAINBOW.map(() => []);
@@ -200,8 +206,10 @@ function updateDecorations(editor: vscode.TextEditor) {
     }
 
     // === TABLES ===
-    const tableMatch = text.match(/^\s*\|(.*)\|?\s*$/);
-    if (tableMatch) {
+    // More robust table line detection
+    const isTableLine = /^\s*\|/.test(text) || (inTable && /\|/.test(text));
+
+    if (isTableLine) {
       if (!inTable) {
         inTable = true;
         isHeaderRow = true;
@@ -209,6 +217,10 @@ function updateDecorations(editor: vscode.TextEditor) {
         tableDataRowCount = 0;
       }
       tableLineCount++;
+
+      const firstPipe = text.indexOf('|');
+      const lastPipe = text.lastIndexOf('|');
+      const tableRange = new vscode.Range(i, firstPipe, i, lastPipe + 1);
 
       // Check if this is a separator row (|---|---|)
       const isSeparator = /^\s*\|[\s\-:|]+\|?\s*$/.test(text);
@@ -231,18 +243,17 @@ function updateDecorations(editor: vscode.TextEditor) {
           }
         }
 
-        // Bold header row content
+        // Apply background and borders to the exact table range
+        tableBorderDecos.push({ range: tableRange });
         if (tableLineCount === 1) {
-          tableHeaderDecos.push({
-             range: new vscode.Range(i, 0, i, text.length),
-          });
+          tableHeaderDecos.push({ range: tableRange });
         } else {
           // Data row
           tableDataRowCount++;
           if (tableDataRowCount % 2 === 1) {
-             tableRowOddDecos.push({ range: new vscode.Range(i, 0, i, text.length) });
+             tableRowOddDecos.push({ range: tableRange });
           } else {
-             tableRowEvenDecos.push({ range: new vscode.Range(i, 0, i, text.length) });
+             tableRowEvenDecos.push({ range: tableRange });
           }
         }
       }
@@ -300,6 +311,7 @@ function updateDecorations(editor: vscode.TextEditor) {
   editor.setDecorations(tableHeaderDecType, tableHeaderDecos);
   editor.setDecorations(tableRowOddDecType, tableRowOddDecos);
   editor.setDecorations(tableRowEvenDecType, tableRowEvenDecos);
+  editor.setDecorations(tableBorderDecType, tableBorderDecos);
 
   // Apply list decorations
   listDecorationTypes.forEach((type, idx) => {
@@ -346,6 +358,7 @@ export function deactivate() {
   tableHeaderDecType?.dispose();
   tableRowOddDecType?.dispose();
   tableRowEvenDecType?.dispose();
+  tableBorderDecType?.dispose();
   listDecorationTypes.forEach(d => d.dispose());
   bqDecorationTypes.forEach(d => d.dispose());
 }

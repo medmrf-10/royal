@@ -1,0 +1,49 @@
+/* Royal Velvet Table Styling for Markdown Preview */
+
+body {
+  --rv-pink: #ff80c0;
+  --rv-orange: #ffc080;
+  --rv-yellow: #ffd580;
+  --rv-green: #a0ff80;
+  --rv-blue: #80d5ff;
+  --rv-purple: #9580ff;
+  --rv-bg: #21212c;
+  --rv-layer1: #272835;
+  --rv-layer2: #2e2f3e;
+  --rv-layer4: #50536d;
+}
+
+table {
+  border-collapse: collapse;
+  margin-bottom: 1.5rem;
+  width: auto;
+  max-width: 100%;
+  border: 1px solid var(--rv-layer4);
+}
+
+th {
+  background-color: rgba(149, 128, 255, 0.15); /* Semi-transparent purple */
+  color: var(--rv-purple);
+  font-weight: bold;
+  border: 1px solid var(--rv-layer4);
+  padding: 8px 12px;
+  text-align: left;
+}
+
+td {
+  border: 1px solid var(--rv-layer4);
+  padding: 8px 12px;
+}
+
+tr:nth-child(odd) {
+  background-color: var(--rv-bg);
+}
+
+tr:nth-child(even) {
+  background-color: var(--rv-layer1);
+}
+
+/* Optional: header rainbow bottom border */
+thead {
+  border-bottom: 2px solid var(--rv-purple);
+}
