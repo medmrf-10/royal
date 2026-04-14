@@ -4,7 +4,7 @@ import * as vscode from 'vscode';
  * Royal Velvet Markdown Decorator
  * - Rainbow gradient headings (character-by-character interpolation)
  * - Colored nested list markers
- * - Colored table elements
+ * - Colored table elements (Obsidian-quality styling)
  * - Colored blockquote markers
  */
 
@@ -20,6 +20,9 @@ const COLORS = {
   red:        '#ff8080',
   text:       '#f8f8f2',
   textMuted:  '#f8f8f280',
+  layer0:     '#21212c',
+  layer1:     '#272835',
+  layer2:     '#2e2f3e',
   layer3:     '#414358',
   layer4:     '#50536d',
 };
@@ -78,9 +81,18 @@ function getGradientDecorationType(color: string, bold: boolean): vscode.TextEdi
 }
 
 // === Table Decoration Types ===
-let tablePipeDecType: vscode.TextEditorDecorationType;
-let tableDashDecType: vscode.TextEditorDecorationType;
-let tableHeaderDecType: vscode.TextEditorDecorationType;
+// Header row
+let tableHeaderBgDecType: vscode.TextEditorDecorationType;
+let tableHeaderPipeDecType: vscode.TextEditorDecorationType;
+let tableHeaderTextDecType: vscode.TextEditorDecorationType;
+
+// Separator row
+let tableSeparatorBgDecType: vscode.TextEditorDecorationType;
+let tableSeparatorPipeDecType: vscode.TextEditorDecorationType;
+let tableSeparatorDashDecType: vscode.TextEditorDecorationType;
+
+// Data rows
+let tableDataPipeDecType: vscode.TextEditorDecorationType;
 let tableRowOddDecType: vscode.TextEditorDecorationType;
 let tableRowEvenDecType: vscode.TextEditorDecorationType;
 
@@ -91,26 +103,53 @@ let listDecorationTypes: vscode.TextEditorDecorationType[] = [];
 let bqDecorationTypes: vscode.TextEditorDecorationType[] = [];
 
 function createStaticDecorations() {
-  // Table decorations
-  tablePipeDecType = vscode.window.createTextEditorDecorationType({
-    color: COLORS.layer4,
-  });
-  tableDashDecType = vscode.window.createTextEditorDecorationType({
-    color: COLORS.layer3,
-  });
-  tableHeaderDecType = vscode.window.createTextEditorDecorationType({
-    color: COLORS.text,
-    backgroundColor: '#9580ff40', // purple semi-transparent
-    fontWeight: 'bold',
+  // ─── Table Header Row ───
+  tableHeaderBgDecType = vscode.window.createTextEditorDecorationType({
+    backgroundColor: '#9580ff18',
     isWholeLine: true,
+    overviewRulerColor: '#9580ff40',
+    borderWidth: '0 0 2px 0',
+    borderStyle: 'solid',
+    borderColor: '#9580ff50',
+  });
+  tableHeaderPipeDecType = vscode.window.createTextEditorDecorationType({
+    color: '#9580ff90',
+    fontWeight: 'bold',
+  });
+  tableHeaderTextDecType = vscode.window.createTextEditorDecorationType({
+    color: COLORS.text,
+    fontWeight: 'bold',
+  });
+
+  // ─── Table Separator Row (|---|---|) ───
+  tableSeparatorBgDecType = vscode.window.createTextEditorDecorationType({
+    backgroundColor: '#9580ff08',
+    isWholeLine: true,
+  });
+  tableSeparatorPipeDecType = vscode.window.createTextEditorDecorationType({
+    color: '#50536d60',
+  });
+  tableSeparatorDashDecType = vscode.window.createTextEditorDecorationType({
+    color: '#9580ff40',
+  });
+
+  // ─── Table Data Rows ───
+  tableDataPipeDecType = vscode.window.createTextEditorDecorationType({
+    color: '#50536d90',
   });
   tableRowOddDecType = vscode.window.createTextEditorDecorationType({
-    backgroundColor: '#272835', // layer-1
+    backgroundColor: '#292a3a',
     isWholeLine: true,
+    borderWidth: '0 0 0 3px',
+    borderStyle: 'solid',
+    borderColor: '#9580ff20',
   });
   tableRowEvenDecType = vscode.window.createTextEditorDecorationType({
-    backgroundColor: '#2e2f3e', // layer-2
+    backgroundColor: '#323346',
     isWholeLine: true,
+    borderWidth: '0 0 0 3px',
+    borderStyle: 'solid',
+    borderColor: '#9580ff10',
   });
 
   // List marker decorations (one per rainbow color)
@@ -140,19 +179,24 @@ function updateDecorations(editor: vscode.TextEditor) {
   // Collect decorations for gradient headings
   const gradientDecorations: Map<vscode.TextEditorDecorationType, vscode.DecorationOptions[]> = new Map();
 
-  // Collect decorations for static types
-  const tablePipeDecos: vscode.DecorationOptions[] = [];
-  const tableDashDecos: vscode.DecorationOptions[] = [];
-  const tableHeaderDecos: vscode.DecorationOptions[] = [];
+  // ─── Table decoration arrays ───
+  const tableHeaderBgDecos: vscode.DecorationOptions[] = [];
+  const tableHeaderPipeDecos: vscode.DecorationOptions[] = [];
+  const tableHeaderTextDecos: vscode.DecorationOptions[] = [];
+
+  const tableSepBgDecos: vscode.DecorationOptions[] = [];
+  const tableSepPipeDecos: vscode.DecorationOptions[] = [];
+  const tableSepDashDecos: vscode.DecorationOptions[] = [];
+
+  const tableDataPipeDecos: vscode.DecorationOptions[] = [];
   const tableRowOddDecos: vscode.DecorationOptions[] = [];
   const tableRowEvenDecos: vscode.DecorationOptions[] = [];
-  
+
   const listDecos: vscode.DecorationOptions[][] = RAINBOW.map(() => []);
   const bqDecos: vscode.DecorationOptions[][] = RAINBOW.map(() => []);
 
   // Track if we're in a table
   let inTable = false;
-  let isHeaderRow = false;
   let tableLineCount = 0;
   let tableDataRowCount = 0;
 
@@ -200,11 +244,10 @@ function updateDecorations(editor: vscode.TextEditor) {
     }
 
     // === TABLES ===
-    const tableMatch = text.match(/^\s*\|(.*)\|?\s*$/);
+    const tableMatch = text.match(/^\s*\|(.*)(\|)?\s*$/);
     if (tableMatch) {
       if (!inTable) {
         inTable = true;
-        isHeaderRow = true;
         tableLineCount = 0;
         tableDataRowCount = 0;
       }
@@ -214,35 +257,54 @@ function updateDecorations(editor: vscode.TextEditor) {
       const isSeparator = /^\s*\|[\s\-:|]+\|?\s*$/.test(text);
 
       if (isSeparator) {
-        // Color separator dashes
+        // ─── Separator row ───
+        tableSepBgDecos.push({ range: new vscode.Range(i, 0, i, text.length) });
+
         for (let c = 0; c < text.length; c++) {
           if (text[c] === '|') {
-            tablePipeDecos.push({ range: new vscode.Range(i, c, i, c + 1) });
+            tableSepPipeDecos.push({ range: new vscode.Range(i, c, i, c + 1) });
           } else if (text[c] === '-' || text[c] === ':') {
-            tableDashDecos.push({ range: new vscode.Range(i, c, i, c + 1) });
+            tableSepDashDecos.push({ range: new vscode.Range(i, c, i, c + 1) });
           }
         }
-        isHeaderRow = false;
-      } else {
-        // Color pipes in data/header rows
+      } else if (tableLineCount === 1) {
+        // ─── Header row (first row of table) ───
+        tableHeaderBgDecos.push({ range: new vscode.Range(i, 0, i, text.length) });
+
+        // Parse cells for header text styling
         for (let c = 0; c < text.length; c++) {
           if (text[c] === '|') {
-            tablePipeDecos.push({ range: new vscode.Range(i, c, i, c + 1) });
+            tableHeaderPipeDecos.push({ range: new vscode.Range(i, c, i, c + 1) });
           }
         }
 
-        // Bold header row content
-        if (tableLineCount === 1) {
-          tableHeaderDecos.push({
-             range: new vscode.Range(i, 0, i, text.length),
-          });
+        // Style header cell text (between pipes)
+        const cellRegex = /\|([^|]+)/g;
+        let cellMatch;
+        while ((cellMatch = cellRegex.exec(text)) !== null) {
+          const cellContent = cellMatch[1];
+          const cellStart = cellMatch.index + 1; // skip the pipe
+          const trimmedStart = cellContent.search(/\S/);
+          const trimmedEnd = cellContent.search(/\S\s*$/) + 1;
+          if (trimmedStart >= 0 && trimmedEnd > trimmedStart) {
+            tableHeaderTextDecos.push({
+              range: new vscode.Range(i, cellStart + trimmedStart, i, cellStart + trimmedEnd),
+            });
+          }
+        }
+      } else {
+        // ─── Data rows ───
+        tableDataRowCount++;
+        if (tableDataRowCount % 2 === 1) {
+          tableRowOddDecos.push({ range: new vscode.Range(i, 0, i, text.length) });
         } else {
-          // Data row
-          tableDataRowCount++;
-          if (tableDataRowCount % 2 === 1) {
-             tableRowOddDecos.push({ range: new vscode.Range(i, 0, i, text.length) });
-          } else {
-             tableRowEvenDecos.push({ range: new vscode.Range(i, 0, i, text.length) });
+          tableRowEvenDecos.push({ range: new vscode.Range(i, 0, i, text.length) });
+        }
+
+        // Color pipes in data rows
+        for (let c = 0; c < text.length; c++) {
+          if (text[c] === '|') {
+            tableDataPipeDecos.push({ range: new vscode.Range(i, c, i, c + 1) });
           }
         }
       }
@@ -295,9 +357,13 @@ function updateDecorations(editor: vscode.TextEditor) {
   });
 
   // Apply table decorations
-  editor.setDecorations(tablePipeDecType, tablePipeDecos);
-  editor.setDecorations(tableDashDecType, tableDashDecos);
-  editor.setDecorations(tableHeaderDecType, tableHeaderDecos);
+  editor.setDecorations(tableHeaderBgDecType, tableHeaderBgDecos);
+  editor.setDecorations(tableHeaderPipeDecType, tableHeaderPipeDecos);
+  editor.setDecorations(tableHeaderTextDecType, tableHeaderTextDecos);
+  editor.setDecorations(tableSeparatorBgDecType, tableSepBgDecos);
+  editor.setDecorations(tableSeparatorPipeDecType, tableSepPipeDecos);
+  editor.setDecorations(tableSeparatorDashDecType, tableSepDashDecos);
+  editor.setDecorations(tableDataPipeDecType, tableDataPipeDecos);
   editor.setDecorations(tableRowOddDecType, tableRowOddDecos);
   editor.setDecorations(tableRowEvenDecType, tableRowEvenDecos);
 
@@ -341,9 +407,13 @@ export function activate(context: vscode.ExtensionContext) {
 export function deactivate() {
   gradientDecorationCache.forEach(d => d.dispose());
   gradientDecorationCache.clear();
-  tablePipeDecType?.dispose();
-  tableDashDecType?.dispose();
-  tableHeaderDecType?.dispose();
+  tableHeaderBgDecType?.dispose();
+  tableHeaderPipeDecType?.dispose();
+  tableHeaderTextDecType?.dispose();
+  tableSeparatorBgDecType?.dispose();
+  tableSeparatorPipeDecType?.dispose();
+  tableSeparatorDashDecType?.dispose();
+  tableDataPipeDecType?.dispose();
   tableRowOddDecType?.dispose();
   tableRowEvenDecType?.dispose();
   listDecorationTypes.forEach(d => d.dispose());
