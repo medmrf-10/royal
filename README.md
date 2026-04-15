@@ -24,24 +24,17 @@ A premium dark Color Theme for Antigravity (and VS Code) inspired by the magnifi
 | **Blue**       | `#80d5ff` | Properties, Markdown H5 |
 | **Purple**     | `#9580ff` | Types, Markdown H6 |
 
-## 🛠️ Installation
+## 🛠️ Installation & Activation
 
-You can install this theme directly via the VSIX package available in the releases or build it from source:
+To quickly build and install the theme in your editor after cloning:
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/username/royal-velvet-vscode.git
-   ```
-2. Open the directory in VS Code or Antigravity.
-3. Install dependencies:
-   ```bash
-   npm install
-   ```
-4. Package the extension:
-   ```bash
-   npx vsce package
-   ```
-5. Install the generated `.vsix` file.
+```bash
+npm install
+npx vsce package
+code --install-extension royal-velvet-antigravity-1.0.0.vsix
+```
+
+*Note: Once installed, go to VS Code Theme settings (`Cmd+K Cmd+T`) and select **Royal Velvet Dark**.*
 
 ## 🤝 Credits
 
